@@ -5,8 +5,7 @@ type: software
 authors:
   - family-names: Soyeb
     given-names: Nawjesh
-    alias: Devnawjesh
-repository-code: "https://github.com/Devnawjesh/hr-payroll"
-url: "https://github.com/Devnawjesh/hr-payroll"
+repository-code: "https://github.com/ltejaswini2005-web/Major-project"
+url: "https://github.com/ltejaswini2005-web/Major-project"
 license: "See repository license"
-abstract: "HR Payroll is a human resource and payroll management system maintained by Nawjesh Soyeb."
+abstract: "HR Payroll is a human resource and payroll management system."
