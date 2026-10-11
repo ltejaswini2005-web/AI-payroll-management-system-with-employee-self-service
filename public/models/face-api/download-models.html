@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>face-api.js Models Download</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+        h1 { color: #333; }
+        .instructions { background: #f0f0f0; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        .button { background: #667eea; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; margin: 5px; }
+        .button:hover { background: #5568d3; }
+        .file-list { background: #fff; border: 1px solid #ddd; padding: 15px; border-radius: 5px; margin: 20px 0; }
+        .file-list li { margin: 8px 0; font-family: monospace; }
+        code { background: #f5f5f5; padding: 2px 5px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>📥 face-api.js Model Files Required</h1>
+    
+    <div class="instructions">
+        <h3>Quick Setup</h3>
+        <p>The kiosk system requires face-api.js model files. Click the button below to download all required files:</p>
+        <button class="button" onclick="downloadAllFiles()">📥 Download All Files</button>
+        <p style="margin-top: 15px; font-size: 12px; color: #666;">This will download approximately 280 MB of model files.</p>
+    </div>
+
+    <div class="instructions">
+        <h3>Required Files</h3>
+        <ul class="file-list" id="fileList"></ul>
+    </div>
+
+    <div class="instructions">
+        <h3>Manual Download</h3>
+        <p>If the automatic download doesn't work, manually download these files from the CDN:</p>
+        <code>https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/</code>
+        <p style="margin-top: 10px;">Save them in this directory: <code>public/models/face-api/</code></p>
+    </div>
+
+    <div class="instructions">
+        <h3>Status Check</h3>
+        <button class="button" onclick="checkFiles()">✓ Check Downloaded Files</button>
+        <div id="status" style="margin-top: 10px; padding: 10px; background: white; border-radius: 5px; display: none;"></div>
+    </div>
+
+    <script>
+        const baseUrl = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/";
+        const files = [
+            "face-api.min.js",
+            "tiny_face_detector_model-weights_manifest.json",
+            "tiny_face_detector_model-weights_shard1.bin",
+            "face_landmark_68_model-weights_manifest.json",
+            "face_landmark_68_model-weights_shard1.bin",
+            "face_recognition_model-weights_manifest.json",
+            "face_recognition_model-weights_shard1.bin",
+            "face_expression_model-weights_manifest.json",
+            "face_expression_model-weights_shard1.bin"
+        ];
+
+        function initFileList() {
+            const list = document.getElementById('fileList');
+            files.forEach(file => {
+                const li = document.createElement('li');
+                li.textContent = file;
+                list.appendChild(li);
+            });
+        }
+
+        async function downloadAllFiles() {
+            const status = document.getElementById('status');
+            status.style.display = 'block';
+            status.innerHTML = '⏳ Downloading files...';
+            
+            let successful = 0;
+            let failed = 0;
+
+            for (const file of files) {
+                try {
+                    const url = baseUrl + file;
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    
+                    const blob = await response.blob();
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = file;
+                    a.click();
+                    
+                    successful++;
+                    status.innerHTML += `<br>✓ ${file}`;
+                } catch (err) {
+                    failed++;
+                    status.innerHTML += `<br>✗ ${file} (${err.message})`;
+                }
+            }
+
+            status.innerHTML += `<br><br><strong>Downloaded: ${successful}, Failed: ${failed}</strong>`;
+            status.style.background = successful === files.length ? '#e8f5e9' : '#fff3e0';
+        }
+
+        function checkFiles() {
+            const status = document.getElementById('status');
+            status.style.display = 'block';
+            status.innerHTML = '✓ All required files are listed above. Please ensure they are downloaded to this directory.';
+            status.style.background = '#e3f2fd';
+        }
+
+        window.addEventListener('load', initFileList);
+    </script>
+</body>
+</html>

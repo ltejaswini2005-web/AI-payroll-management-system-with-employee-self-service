@@ -1,0 +1,143 @@
+<?php
+
+namespace App\Providers;
+
+use App\Models\SystemSetting;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\View;
+
+class AppServiceProvider extends ServiceProvider
+{
+    /**
+     * Register any application services.
+     */
+    public function register(): void
+    {
+        //
+    }
+
+    /**
+     * Bootstrap any application services.
+     */
+    public function boot(): void
+    {
+        View::composer('partials.template.sidebar', function ($view): void {
+            $user = auth()->user();
+            $can = fn (string $permission): bool => $user?->hasPermission($permission) ?? false;
+            $canAny = fn (array $permissions): bool => $user?->hasAnyPermission($permissions) ?? false;
+            $isEmployeeAdmin = $user?->roles()->whereIn('slug', ['super-admin', 'hr-manager'])->exists() ?? false;
+
+            $view->with('sidebarState', [
+                'isDashboard' => request()->routeIs('dashboard'),
+                'isOrganizationStructure' => request()->routeIs('organization.structure'),
+                'isEmployees' => request()->routeIs('employees.*')
+                    || request()->routeIs('departments.*')
+                    || request()->routeIs('designations.*')
+                    || request()->routeIs('employee-resignations.*')
+                    || request()->routeIs('employee-statuses.*'),
+                'isAttendance' => request()->routeIs('attendance.*'),
+                'isAnnouncements' => request()->routeIs('announcements.*'),
+                'isLeave' => request()->routeIs('leave-categories.*')
+                    || request()->routeIs('leave-policies.*')
+                    || request()->routeIs('leave-balances.*')
+                    || request()->routeIs('leave-applications.*')
+                    || request()->routeIs('leave-approvals.*')
+                    || request()->routeIs('leave-reports.*'),
+                'isHoliday' => request()->routeIs('holidays.*'),
+                'isUserManagement' => request()->routeIs('users.*') || request()->routeIs('roles.*') || request()->routeIs('permissions.*'),
+                'isSettings' => request()->routeIs('settings.*'),
+
+                'canEmployeeView' => $isEmployeeAdmin && $can('employee.view'),
+                'canEmployeeCreate' => $isEmployeeAdmin && $can('employee.create'),
+                'canEmployeeUpdate' => $isEmployeeAdmin && $can('employee.update'),
+                'canEmployeeProfileUpdateSubmit' => ($user?->employee !== null) && $can('employee.profile-update-request-submit'),
+                'canResignationApply' => ($user?->employee !== null) && $canAny(['employee.resignation-apply', 'employee.resignation-view']),
+                'canResignationSupervisorApprove' => $can('employee.resignation-supervisor-approve'),
+                'canResignationFinalApprove' => $can('employee.resignation-final-approve'),
+                'canEmployeeStatusView' => $canAny(['employee.status-view', 'employee.status-update']),
+                'canDepartmentView' => $isEmployeeAdmin && $can('department.view'),
+                'canDepartmentCreate' => $isEmployeeAdmin && $can('department.create'),
+                'canDesignationView' => $isEmployeeAdmin && $can('designation.view'),
+                'canDesignationCreate' => $isEmployeeAdmin && $can('designation.create'),
+                'canHolidayView' => $isEmployeeAdmin && $can('holiday.view'),
+                'canHolidayCreate' => $isEmployeeAdmin && $can('holiday.create'),
+                'canHolidayUpdate' => $isEmployeeAdmin && $can('holiday.update'),
+                'canAttendanceView' => $can('attendance.view'),
+                'canAttendanceClock' => $can('attendance.clock'),
+                'canAttendanceManage' => $can('attendance.manage'),
+                'canAttendanceReport' => $canAny(['attendance.report', 'attendance.export']),
+                'canAttendanceApiIntegration' => $canAny(['attendance.api-integration', 'attendance.manage']),
+                'canAnnouncementView' => $can('announcement.view'),
+                'canAnnouncementCreate' => $can('announcement.create'),
+                'canAnnouncementPublish' => $can('announcement.publish'),
+                'canAnnouncementApprove' => $can('announcement.approve'),
+                'canAnnouncementMenu' => $canAny(['announcement.view', 'announcement.create', 'announcement.publish', 'announcement.approve']),
+                'canLeaveView' => $can('leave.view'),
+                'canLeaveApply' => $can('leave.apply'),
+                'canLeaveApprove' => $can('leave.approve'),
+                'canLeaveManageCategories' => $can('leave.manage-categories'),
+                'canLeaveManageQuotas' => $canAny(['leave.manage-quotas', 'leave.manage-balances']),
+                'canLeaveReport' => $can('leave.report'),
+
+                'isLoan' => request()->routeIs('loans.*'),
+                'canLoanView'   => $canAny(['loan.view', 'loan.create', 'loan.update', 'loan.approve']),
+                'canLoanCreate' => $can('loan.create'),
+                'canLoanApprove' => $can('loan.approve'),
+
+                'canRoleView' => $can('role.view'),
+                'canRoleCreate' => $can('role.create'),
+                'canRoleUpdate' => $can('role.update'),
+                'canRoleAssign' => $can('role.assign'),
+
+                'canUserList' => $canAny(['role.view', 'role.assign']),
+                'canUserCreate' => $can('role.assign'),
+                'canPermissionsMenu' => $can('role.update'),
+                'canUserManagementMenu' => $canAny(['role.view', 'role.create', 'role.update', 'role.assign']),
+                'canSettingsView' => $can('settings.view'),
+            ]);
+        });
+
+        try {
+            if (! Schema::hasTable('system_settings')) {
+                return;
+            }
+        } catch (\Throwable) {
+            return;
+        }
+
+        $settings = SystemSetting::autoloaded();
+
+        if (! empty($settings['app_name'])) {
+            Config::set('app.name', $settings['app_name']);
+        }
+
+        if (! empty($settings['company_logo'])) {
+            Config::set('madpos_ui.logo', $settings['company_logo']);
+        }
+
+        if (! empty($settings['company_favicon'])) {
+            Config::set('madpos_ui.favicon', $settings['company_favicon']);
+        }
+
+        if (! empty($settings['time_zone'])) {
+            Config::set('app.timezone', $settings['time_zone']);
+            date_default_timezone_set($settings['time_zone']);
+        }
+
+        if (! empty($settings['mail_mailer'])) {
+            Config::set('mail.default', $settings['mail_mailer']);
+        }
+
+        Config::set('mail.mailers.smtp.host', $settings['mail_host'] ?? Config::get('mail.mailers.smtp.host'));
+        Config::set('mail.mailers.smtp.port', $settings['mail_port'] ?? Config::get('mail.mailers.smtp.port'));
+        Config::set('mail.mailers.smtp.username', $settings['mail_username'] ?? Config::get('mail.mailers.smtp.username'));
+        Config::set('mail.mailers.smtp.password', $settings['mail_password'] ?? Config::get('mail.mailers.smtp.password'));
+        Config::set('mail.mailers.smtp.encryption', $settings['mail_encryption'] ?? Config::get('mail.mailers.smtp.encryption'));
+        Config::set('mail.from.address', $settings['mail_from_address'] ?? Config::get('mail.from.address'));
+        Config::set('mail.from.name', $settings['mail_from_name'] ?? Config::get('mail.from.name'));
+
+        View::share('appSettings', $settings);
+    }
+}
